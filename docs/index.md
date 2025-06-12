@@ -1,4 +1,4 @@
-# fasthep-carpenter
+# fasthep-toolbench
 
 ```{toctree}
 :maxdepth: 2

@@ -4,11 +4,11 @@ build-backend = "hatchling.build"
 
 
 [project]
-name = "fasthep-carpenter"
+name = "fasthep-toolbench"
 authors = [
   { name = "Luke Kreczko", email = "kreczko@cern.ch" },
 ]
-description = "Package for making (ROOT T)Trees into (Pandas) Tables"
+description = "Package for cross-package utility functions"
 readme = "README.md"
 requires-python = ">=3.9"
 classifiers = [
@@ -47,15 +47,15 @@ docs = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/FAST-HEP/fasthep-carpenter"
-"Bug Tracker" = "https://github.com/FAST-HEP/fasthep-carpenter/issues"
-Discussions = "https://github.com/FAST-HEP/fasthep-carpenter/discussions"
-Changelog = "https://github.com/FAST-HEP/fasthep-carpenter/releases"
+Homepage = "https://github.com/FAST-HEP/fasthep-toolbench"
+"Bug Tracker" = "https://github.com/FAST-HEP/fasthep-toolbench/issues"
+Discussions = "https://github.com/FAST-HEP/fasthep-toolbench/discussions"
+Changelog = "https://github.com/FAST-HEP/fasthep-toolbench/releases"
 
 
 [tool.hatch]
 version.source = "vcs"
-build.hooks.vcs.version-file = "src/fasthep_carpenter/_version.py"
+build.hooks.vcs.version-file = "src/fasthep_toolbench/_version.py"
 
 [tool.hatch.envs.default]
 features = ["test"]
@@ -64,7 +64,7 @@ scripts.test = "pytest {args}"
 
 [tool.uv]
 dev-dependencies = [
-  "fasthep_carpenter[test]",
+  "fasthep_toolbench[test]",
 ]
 
 
@@ -82,7 +82,7 @@ testpaths = [
 
 
 [tool.coverage]
-run.source = ["fasthep_carpenter"]
+run.source = ["fasthep_toolbench"]
 report.exclude_also = [
   '\.\.\.',
   'if typing.TYPE_CHECKING:',
@@ -99,7 +99,7 @@ disallow_untyped_defs = false
 disallow_incomplete_defs = false
 
 [[tool.mypy.overrides]]
-module = "fasthep_carpenter.*"
+module = "fasthep_toolbench.*"
 disallow_untyped_defs = true
 disallow_incomplete_defs = true
 
@@ -136,7 +136,7 @@ ignore = [
 ]
 isort.required-imports = ["from __future__ import annotations"]
 # Uncomment if using a _compat.typing backport
-# typing-modules = ["fasthep_carpenter._compat.typing"]
+# typing-modules = ["fasthep_toolbench._compat.typing"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["T20"]

@@ -32,7 +32,7 @@ def pylint(session: nox.Session) -> None:
     # This needs to be installed into the package environment, and is slower
     # than a pre-commit check
     session.install("-e.", "pylint>=3.2")
-    session.run("pylint", "fasthep_carpenter", *session.posargs)
+    session.run("pylint", "fasthep_toolbench", *session.posargs)
 
 
 @nox.session
@@ -89,7 +89,7 @@ def build_api_docs(session: nox.Session) -> None:
         "--module-first",
         "--no-toc",
         "--force",
-        "src/fasthep_carpenter",
+        "src/fasthep_toolbench",
     )
 
 
