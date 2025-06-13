@@ -9,13 +9,13 @@ authors = [
   { name = "Luke Kreczko", email = "kreczko@cern.ch" },
 ]
 description = "Package for cross-package utility functions"
+license = "Apache-2.0"
 readme = "README.md"
 requires-python = ">=3.11"
 classifiers = [
   "Development Status :: 1 - Planning",
   "Intended Audience :: Science/Research",
   "Intended Audience :: Developers",
-  "License :: OSI Approved :: Apache Software License",
   "Operating System :: OS Independent",
   "Programming Language :: Python",
   "Programming Language :: Python :: 3",
