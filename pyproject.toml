@@ -29,6 +29,7 @@ classifiers = [
 dynamic = ["version"]
 dependencies = [
   "rich",
+  "tabulate",
 ]
 
 [project.optional-dependencies]
