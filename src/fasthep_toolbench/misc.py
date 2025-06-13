@@ -78,3 +78,22 @@ def generate_save_path(base_path: Path, workflow_name: str, config_path: Path) -
     today = formatted_today()
     config_hash = get_file_hash(config_path)
     return Path(f"{base_path}/{workflow_name}/{today}/{config_hash}/").resolve()
+
+
+def merge_dicts(
+    dicts: list[dict[str, Any]],
+    names: list[str] | None = None,
+) -> dict[str, Any]:
+    """
+    Merge multiple dictionaries into one.
+    """
+    if names:
+        if len(dicts) != len(names):
+            msg = "Number of dictionaries and names must match."
+            raise ValueError(msg)
+        return dict(zip(names, dicts, strict=False))
+
+    merged = {}
+    for d in dicts:
+        merged.update(d)
+    return merged
