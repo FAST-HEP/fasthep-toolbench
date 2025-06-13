@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from collections.abc import Sequence
 from enum import Enum
 from itertools import cycle
@@ -34,12 +35,12 @@ def display(
     data: list[tuple[Any]],
     title: str | None = None,
     headers: list[str] | None = None,
-    format: DisplayFormats = DisplayFormats.SIMPLE,
+    display_format: DisplayFormats = DisplayFormats.SIMPLE,
 ) -> None:
     """Display data in console"""
-    match format:
+    match display_format:
         case DisplayFormats.SIMPLE | DisplayFormats.PIP:
-            separator = "==" if format == DisplayFormats.PIP else ": "
+            separator = "==" if display_format == DisplayFormats.PIP else ": "
             print_simple(data, title, headers, separator=separator)
         case DisplayFormats.TABLE:
             print_table(data, title, headers)
@@ -49,8 +50,6 @@ def display(
             msg = "LaTeX format is not implemented yet."
             raise NotImplementedError(msg)
         case DisplayFormats.JSON:
-            import json
-
             console = Console()
             console.print(json.dumps(data, indent=4))
         # case _:
@@ -138,13 +137,3 @@ def print_table_md(
             colalign=("left", "right"),
         )
     )
-
-
-def print_json(
-    data: list[tuple[Any]],
-) -> None:
-    """Print data in JSON format"""
-    import json
-
-    console = Console()
-    console.print(json.dumps(data, indent=4))
