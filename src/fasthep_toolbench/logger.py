@@ -24,3 +24,13 @@ def logger_with_logfile(logfile: str) -> loguru.Logger:
         logfile, level="DEBUG", rotation="10 MB", retention="10 days"
     )  # Log to file
     return logger
+
+
+def default_logger() -> loguru.Logger:
+    """
+    Create a default logger.
+
+    Returns:
+        loguru.Logger: logger instance.
+    """
+    return loguru.logger
