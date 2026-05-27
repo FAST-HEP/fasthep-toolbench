@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Sequence
-from enum import Enum
+from enum import StrEnum
 from itertools import cycle
 from typing import Any
 
@@ -11,7 +11,7 @@ from rich.table import Table
 from tabulate import tabulate
 
 
-class DisplayFormats(str, Enum):
+class DisplayFormats(StrEnum):
     """Display formats for command output"""
 
     SIMPLE = "simple"
