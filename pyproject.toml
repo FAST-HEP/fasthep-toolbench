@@ -61,7 +61,8 @@ Changelog = "https://github.com/FAST-HEP/fasthep-toolbench/releases"
 [tool.hatch]
 version.source = "vcs"
 build.hooks.vcs.version-file = "src/fasthep_toolbench/_version.py"
-
+[tool.hatch.version.raw-options]
+fallback_version = "2026.06.1"
 [tool.hatch.envs.default]
 features = ["test"]
 scripts.test = "pytest {args}"
