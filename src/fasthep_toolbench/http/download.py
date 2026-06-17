@@ -4,27 +4,29 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Literal
 
 import httpx
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
-from ..logger import default_logger
-
-logger = default_logger()
+DownloadStatus = Literal["downloaded", "skipped"]
 
 
-def download_from_url(url: str, destination: str, force: bool = False) -> None:
+def download_from_url(
+    url: str, destination: str, force: bool = False
+) -> DownloadStatus:
     """Download a file from a URL"""
     dst = Path(destination)
     if dst.exists() and not force:
-        msg = f"File {destination} already exists. Use --force to overwrite. Skipping download."
-        logger.warning(msg)
-        return
+        return "skipped"
+
     result = httpx.get(url, follow_redirects=True, timeout=60)
     result.raise_for_status()
+
     dst.parent.mkdir(parents=True, exist_ok=True)
-    with dst.open("wb") as file_handle:
-        file_handle.write(result.content)
+    dst.write_bytes(result.content)
+
+    return "downloaded"
 
 
 def download_from_json(json_input: str, destination: str, force: bool = False) -> None:
@@ -43,13 +45,21 @@ def download_from_json(json_input: str, destination: str, force: bool = False) -
         transient=True,
     ) as progress:
         task = progress.add_task("Downloading files...", total=len(data))
+        downloaded = 0
+        skipped = 0
+
         for name, url in data.items():
-            progress.update(task, advance=1)
-            # TODO: this should be a logger
             output_path = dst / name
-            download = progress.add_task(
-                f"Downloading {output_path} from {url}", total=None
-            )
-            download_from_url(url, output_path, force)
-            progress.update(download, completed=0)
-        progress.update(task, completed=0)
+
+            progress.update(task, description=f"Checking {output_path}")
+            status = download_from_url(url, output_path, force)
+
+            if status == "downloaded":
+                downloaded += 1
+            else:
+                skipped += 1
+
+            progress.advance(task)
+        progress.console.print(
+            f"Downloaded {downloaded} file(s), skipped {skipped} existing file(s)."
+        )
