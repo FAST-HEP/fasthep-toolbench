@@ -21,6 +21,8 @@ def download_from_url(url: str, destination: str, force: bool = False) -> None:
         logger.warning(msg)
         return
     result = httpx.get(url, follow_redirects=True, timeout=60)
+    result.raise_for_status()
+    dst.parent.mkdir(parents=True, exist_ok=True)
     with dst.open("wb") as file_handle:
         file_handle.write(result.content)
 
