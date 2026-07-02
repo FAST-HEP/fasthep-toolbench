@@ -3,3 +3,6 @@ registry:
     cms.dasgoclient:
       spec: fasthep_toolbench.cms.das:DASGOCLIENT_SPEC
       impl: fasthep_toolbench.cms.das:run_dasgoclient
+    d2:
+      spec: fasthep_toolbench.graph.d2:D2_SPEC
+      impl: fasthep_toolbench.graph.d2:run_d2

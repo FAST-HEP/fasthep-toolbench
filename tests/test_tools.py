@@ -6,6 +6,7 @@ import pytest
 
 from fasthep_toolbench.cms import das
 from fasthep_toolbench.command import CommandResult, run_command
+from fasthep_toolbench.graph import d2
 from fasthep_toolbench.model import ToolAvailability
 from fasthep_toolbench.tools import (
     ToolSpec,
@@ -74,27 +75,46 @@ def test_run_command_reports_missing_executable() -> None:
     assert result.stderr == "Command not found: definitely-not-a-fasthep-command"
 
 
-def test_default_registry_contains_dasgoclient() -> None:
+def test_default_registry_contains_builtin_tools() -> None:
     registry = default_tool_registry_config()
 
     assert registry["tools"]["cms.dasgoclient"] == {
         "spec": "fasthep_toolbench.cms.das:DASGOCLIENT_SPEC",
         "impl": "fasthep_toolbench.cms.das:run_dasgoclient",
     }
+    assert registry["tools"]["d2"] == {
+        "spec": "fasthep_toolbench.graph.d2:D2_SPEC",
+        "impl": "fasthep_toolbench.graph.d2:run_d2",
+    }
 
 
 def test_list_registered_tools_includes_builtin() -> None:
-    assert list_registered_tools(include_entry_points=False) == ["cms.dasgoclient"]
+    assert list_registered_tools(include_entry_points=False) == [
+        "cms.dasgoclient",
+        "d2",
+    ]
     assert "cms.dasgoclient" in tools_list_text(include_entry_points=False)
+    assert "d2" in tools_list_text(include_entry_points=False)
 
 
-def test_load_tool_binding_loads_spec_and_impl() -> None:
+def test_load_tool_binding_loads_dasgoclient_spec_and_impl() -> None:
     binding = load_tool_binding("cms.dasgoclient", include_entry_points=False)
 
     assert binding.spec.name == "cms.dasgoclient"
     assert binding.spec.kind == "external_tool"
     assert binding.spec.params["query"].required
     assert binding.impl.__name__ == "run_dasgoclient"
+
+
+def test_load_tool_binding_loads_d2_spec_and_impl() -> None:
+    binding = load_tool_binding("d2", include_entry_points=False)
+
+    assert binding.spec.name == "d2"
+    assert binding.spec.kind == "external_tool"
+    assert binding.spec.params["input"].required
+    assert not binding.spec.params["output"].required
+    assert binding.spec.params["format"].default == "svg"
+    assert binding.impl.__name__ == "run_d2"
 
 
 def test_tool_spec_from_obj_normalises_raw_spec() -> None:
@@ -161,6 +181,16 @@ def test_tool_info_reports_metadata() -> None:
     text = tool_info_text("cms.dasgoclient", include_entry_points=False)
     assert "Tool: cms.dasgoclient" in text
     assert "Install method: github_release" in text
+
+
+def test_d2_tool_info_reports_metadata() -> None:
+    info = tool_info("d2", include_entry_points=False)
+
+    assert info["spec"].install["docs"] == "https://d2lang.com/tour/install/"
+    assert info["availability"]["executable"] == "d2"
+    text = tool_info_text("d2", include_entry_points=False)
+    assert "Tool: d2" in text
+    assert "Install method: install_script" in text
 
 
 def test_run_registered_tool_uses_dasgoclient_executor(
@@ -295,3 +325,88 @@ def test_dasgoclient_runs_through_command_helper(
     ]
     assert result.exit_code == 2
     assert result.stderr == "das error"
+
+
+def test_d2_runs_through_command_helper(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[list[str]] = []
+
+    def fake_run_command(command: list[str]) -> CommandResult:
+        calls.append(command)
+        return CommandResult(command=command, exit_code=0, stdout="", stderr="")
+
+    monkeypatch.setattr(d2, "run_command", fake_run_command)
+
+    result = d2.run_d2(
+        input="input.d2",
+        output="output.svg",
+        format="svg",
+        layout="elk",
+        theme="300",
+        availability=ToolAvailability(
+            available=True,
+            method="path",
+            executable="d2",
+            path="/tmp/d2",
+        ),
+    )
+
+    assert calls == [
+        [
+            "/tmp/d2",
+            "input.d2",
+            "output.svg",
+            "--format",
+            "svg",
+            "--layout",
+            "elk",
+            "--theme",
+            "300",
+        ]
+    ]
+    assert result.ok
+
+
+def test_registered_d2_accepts_positional_input_output(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[list[str]] = []
+
+    def fake_run_command(command: list[str]) -> CommandResult:
+        calls.append(command)
+        return CommandResult(command=command, exit_code=0, stdout="rendered", stderr="")
+
+    monkeypatch.setattr(d2, "run_command", fake_run_command)
+
+    result = run_registered_tool(
+        "d2",
+        ["input.d2", "output.svg"],
+        include_entry_points=False,
+    )
+
+    assert isinstance(result, CommandResult)
+    assert calls == [["d2", "input.d2", "output.svg", "--format", "svg"]]
+    assert result.stdout == "rendered"
+
+
+def test_d2_tool_run_text_formats_structured_command_result(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(
+        d2,
+        "run_command",
+        lambda command: CommandResult(  # noqa: ARG005
+            command=["d2", "input.d2", "output.svg"],
+            exit_code=0,
+            stdout="",
+            stderr="",
+        ),
+    )
+
+    text = tool_run_text(
+        "d2",
+        ["input.d2", "output.svg"],
+        include_entry_points=False,
+    )
+
+    assert '"tool": "d2"' in text
+    assert '"command": [' in text
