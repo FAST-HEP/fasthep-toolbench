@@ -21,6 +21,19 @@ class CommandResult:
     def ok(self) -> bool:
         return self.exit_code == 0 and not self.timed_out
 
+    def to_dict(self, *, tool: str | None = None) -> dict[str, object]:
+        data: dict[str, object] = {
+            "command": self.command,
+            "executable": self.command[0] if self.command else None,
+            "exit_code": self.exit_code,
+            "stdout": self.stdout,
+            "stderr": self.stderr,
+            "timed_out": self.timed_out,
+        }
+        if tool is not None:
+            data = {"tool": tool, **data}
+        return data
+
 
 def run_command(
     command: Sequence[str],

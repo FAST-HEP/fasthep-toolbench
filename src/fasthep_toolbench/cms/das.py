@@ -1,8 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
-
-from fasthep_toolbench.command import run_command
+from fasthep_toolbench.command import CommandResult, run_command
 from fasthep_toolbench.model import ToolAvailability
 
 DASGOCLIENT_SPEC = {
@@ -35,13 +33,13 @@ def run_dasgoclient(
     format: str = "json",
     timeout: int | float | str = 60,
     availability: ToolAvailability | None = None,
-) -> dict[str, Any]:
+) -> CommandResult:
     executable = (
         availability.path
         if availability is not None and availability.path is not None
         else "dasgoclient"
     )
-    result = run_command(
+    return run_command(
         [
             executable,
             "--query",
@@ -51,16 +49,3 @@ def run_dasgoclient(
         ],
         timeout=float(timeout),
     )
-    return {
-        "tool": "cms.dasgoclient",
-        "status": "ok" if result.ok else "error",
-        "available": availability.available if availability is not None else None,
-        "executable": executable,
-        "query": query,
-        "format": format,
-        "command": result.command,
-        "exit_code": result.exit_code,
-        "stdout": result.stdout,
-        "stderr": result.stderr,
-        "timed_out": result.timed_out,
-    }

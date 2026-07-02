@@ -5,6 +5,7 @@ from collections.abc import Mapping, Sequence
 from typing import Any
 
 from fasthep_toolbench.api import run_registered_tool, tool_info
+from fasthep_toolbench.command import CommandResult
 from fasthep_toolbench.loader import list_registered_tools
 
 
@@ -77,6 +78,8 @@ def tool_run_text(
         registry_cfg,
         include_entry_points=include_entry_points,
     )
+    if isinstance(result, CommandResult):
+        return json.dumps(result.to_dict(tool=name), indent=2, sort_keys=True) + "\n"
     if isinstance(result, str):
         return result if result.endswith("\n") else f"{result}\n"
     return json.dumps(result, indent=2, sort_keys=True) + "\n"

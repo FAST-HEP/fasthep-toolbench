@@ -186,12 +186,15 @@ def test_run_registered_tool_uses_dasgoclient_executor(
         include_entry_points=False,
     )
 
-    assert result["tool"] == "cms.dasgoclient"
-    assert result["status"] in {"ok", "error"}
-    assert result["query"] == "/Dataset/Run/TIER"
-    assert result["format"] == "json"
-    assert result["exit_code"] == 0
-    assert result["stdout"] == '[{"dataset": "example"}]\n'
+    assert isinstance(result, CommandResult)
+    assert result.exit_code == 0
+    assert result.stdout == '[{"dataset": "example"}]\n'
+    assert result.command[-4:] == [
+        "--query",
+        "/Dataset/Run/TIER",
+        "--format",
+        "json",
+    ]
 
 
 def test_tool_run_text_formats_structured_result(
@@ -248,8 +251,8 @@ def test_registry_cfg_can_add_external_tool(
         registry,
         include_entry_points=False,
     )
-    assert result["tool"] == "cms.dasgoclient"
-    assert result["query"] == "hello"
+    assert isinstance(result, CommandResult)
+    assert result.command[-4:] == ["--query", "hello", "--format", "json"]
 
 
 def test_dasgoclient_runs_through_command_helper(
@@ -290,6 +293,5 @@ def test_dasgoclient_runs_through_command_helper(
             5.0,
         )
     ]
-    assert result["status"] == "error"
-    assert result["exit_code"] == 2
-    assert result["stderr"] == "das error"
+    assert result.exit_code == 2
+    assert result.stderr == "das error"
