@@ -1,7 +1,12 @@
 from __future__ import annotations
 
+import sys
+
 import pytest
 
+from fasthep_toolbench.cms import das
+from fasthep_toolbench.command import CommandResult, run_command
+from fasthep_toolbench.model import ToolAvailability
 from fasthep_toolbench.tools import (
     ToolSpec,
     default_tool_registry_config,
@@ -14,6 +19,59 @@ from fasthep_toolbench.tools import (
     tool_run_text,
     tools_list_text,
 )
+
+
+def test_run_command_captures_success() -> None:
+    result = run_command(
+        [
+            sys.executable,
+            "-c",
+            "print('hello')",
+        ]
+    )
+
+    assert result.ok
+    assert result.exit_code == 0
+    assert result.stdout == "hello\n"
+    assert result.stderr == ""
+
+
+def test_run_command_reports_nonzero_exit() -> None:
+    result = run_command(
+        [
+            sys.executable,
+            "-c",
+            "import sys; sys.stderr.write('bad'); sys.exit(7)",
+        ]
+    )
+
+    assert not result.ok
+    assert result.exit_code == 7
+    assert result.stdout == ""
+    assert result.stderr == "bad"
+
+
+def test_run_command_reports_timeout() -> None:
+    result = run_command(
+        [
+            sys.executable,
+            "-c",
+            "import time; time.sleep(2)",
+        ],
+        timeout=0.1,
+    )
+
+    assert not result.ok
+    assert result.exit_code == 124
+    assert result.timed_out
+
+
+def test_run_command_reports_missing_executable() -> None:
+    result = run_command(["definitely-not-a-fasthep-command"])
+
+    assert not result.ok
+    assert result.exit_code == 127
+    assert result.stderr == "Command not found: definitely-not-a-fasthep-command"
 
 
 def test_default_registry_contains_dasgoclient() -> None:
@@ -105,7 +163,23 @@ def test_tool_info_reports_metadata() -> None:
     assert "Install method: github_release" in text
 
 
-def test_run_registered_tool_returns_placeholder() -> None:
+def test_run_registered_tool_uses_dasgoclient_executor(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_run_command(
+        command: list[str],
+        *,
+        timeout: int | float | None = None,  # noqa: ARG001
+    ) -> CommandResult:
+        return CommandResult(
+            command=command,
+            exit_code=0,
+            stdout='[{"dataset": "example"}]\n',
+            stderr="",
+        )
+
+    monkeypatch.setattr(das, "run_command", fake_run_command)
+
     result = run_registered_tool(
         "cms.dasgoclient",
         ["/Dataset/Run/TIER"],
@@ -113,12 +187,25 @@ def test_run_registered_tool_returns_placeholder() -> None:
     )
 
     assert result["tool"] == "cms.dasgoclient"
-    assert result["status"] == "placeholder"
+    assert result["status"] in {"ok", "error"}
     assert result["query"] == "/Dataset/Run/TIER"
     assert result["format"] == "json"
+    assert result["exit_code"] == 0
+    assert result["stdout"] == '[{"dataset": "example"}]\n'
 
 
-def test_tool_run_text_formats_structured_result() -> None:
+def test_tool_run_text_formats_structured_result(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def fake_run_command(
+        command: list[str],
+        *,
+        timeout: int | float | None = None,  # noqa: ARG001
+    ) -> CommandResult:
+        return CommandResult(command=command, exit_code=0, stdout="[]\n", stderr="")
+
+    monkeypatch.setattr(das, "run_command", fake_run_command)
+
     text = tool_run_text(
         "cms.dasgoclient",
         ["/Dataset/Run/TIER"],
@@ -126,10 +213,12 @@ def test_tool_run_text_formats_structured_result() -> None:
     )
 
     assert '"tool": "cms.dasgoclient"' in text
-    assert '"status": "placeholder"' in text
+    assert '"exit_code":' in text
 
 
-def test_registry_cfg_can_add_external_tool() -> None:
+def test_registry_cfg_can_add_external_tool(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     registry = {
         "tools": {
             "example.dasgoclient": {
@@ -143,6 +232,16 @@ def test_registry_cfg_can_add_external_tool() -> None:
         registry,
         include_entry_points=False,
     )
+    monkeypatch.setattr(
+        das,
+        "run_command",
+        lambda command, *, timeout=None: CommandResult(  # noqa: ARG005
+            command=command,
+            exit_code=0,
+            stdout="",
+            stderr="",
+        ),
+    )
     result = run_registered_tool(
         "example.dasgoclient",
         ["hello"],
@@ -151,3 +250,46 @@ def test_registry_cfg_can_add_external_tool() -> None:
     )
     assert result["tool"] == "cms.dasgoclient"
     assert result["query"] == "hello"
+
+
+def test_dasgoclient_runs_through_command_helper(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls: list[tuple[list[str], int | float | None]] = []
+
+    def fake_run_command(
+        command: list[str],
+        *,
+        timeout: int | float | None = None,
+    ) -> CommandResult:
+        calls.append((command, timeout))
+        return CommandResult(
+            command=command,
+            exit_code=2,
+            stdout="",
+            stderr="das error",
+        )
+
+    monkeypatch.setattr(das, "run_command", fake_run_command)
+
+    result = das.run_dasgoclient(
+        query="/Dataset/Run/TIER",
+        format="json",
+        timeout=5,
+        availability=ToolAvailability(
+            available=True,
+            method="path",
+            executable="dasgoclient",
+            path="/tmp/dasgoclient",
+        ),
+    )
+
+    assert calls == [
+        (
+            ["/tmp/dasgoclient", "--query", "/Dataset/Run/TIER", "--format", "json"],
+            5.0,
+        )
+    ]
+    assert result["status"] == "error"
+    assert result["exit_code"] == 2
+    assert result["stderr"] == "das error"

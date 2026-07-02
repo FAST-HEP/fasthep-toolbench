@@ -32,6 +32,7 @@ dependencies = [
   "loguru",
   "pyyaml",
   "rich",
+  "sh",
   "tabulate",
 ]
 
@@ -116,6 +117,10 @@ ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 module = "yaml"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "sh"
 ignore_missing_imports = true
 
 

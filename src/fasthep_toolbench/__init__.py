@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from ._version import version as __version__
 from .tools import (
+    CommandResult,
     ToolAvailability,
     ToolBinding,
     ToolParam,
@@ -16,6 +17,7 @@ from .tools import (
     list_registered_tools,
     load_tool_binding,
     load_tool_entry,
+    run_command,
     run_registered_tool,
     tool_info,
     tool_info_text,
@@ -24,6 +26,7 @@ from .tools import (
 )
 
 __all__ = [
+    "CommandResult",
     "ToolAvailability",
     "ToolBinding",
     "ToolParam",
@@ -33,6 +36,7 @@ __all__ = [
     "list_registered_tools",
     "load_tool_binding",
     "load_tool_entry",
+    "run_command",
     "run_registered_tool",
     "tool_info",
     "tool_info_text",
