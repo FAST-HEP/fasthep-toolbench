@@ -1,0 +1,5 @@
+registry:
+  tools:
+    cms.dasgoclient:
+      spec: fasthep_toolbench.cms.das:DASGOCLIENT_SPEC
+      impl: fasthep_toolbench.cms.das:run_dasgoclient

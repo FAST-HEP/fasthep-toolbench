@@ -7,5 +7,35 @@ fasthep-toolbench: Package for cross-package utility functions
 from __future__ import annotations
 
 from ._version import version as __version__
+from .tools import (
+    ToolAvailability,
+    ToolBinding,
+    ToolParam,
+    ToolSpec,
+    default_tool_registry_config,
+    list_registered_tools,
+    load_tool_binding,
+    load_tool_entry,
+    run_registered_tool,
+    tool_info,
+    tool_info_text,
+    tool_run_text,
+    tools_list_text,
+)
 
-__all__ = ["__version__"]
+__all__ = [
+    "ToolAvailability",
+    "ToolBinding",
+    "ToolParam",
+    "ToolSpec",
+    "__version__",
+    "default_tool_registry_config",
+    "list_registered_tools",
+    "load_tool_binding",
+    "load_tool_entry",
+    "run_registered_tool",
+    "tool_info",
+    "tool_info_text",
+    "tool_run_text",
+    "tools_list_text",
+]
