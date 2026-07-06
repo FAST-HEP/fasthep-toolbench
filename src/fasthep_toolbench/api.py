@@ -63,5 +63,6 @@ def tool_info(
             "executable": availability.executable,
             "path": availability.path,
             "message": availability.message,
+            "source": availability.source,
         },
     }

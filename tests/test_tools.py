@@ -1,12 +1,16 @@
 from __future__ import annotations
 
+import shutil
 import sys
+import tarfile
+from pathlib import Path
 
 import pytest
 
 from fasthep_toolbench.cms import das
 from fasthep_toolbench.command import CommandResult, run_command
 from fasthep_toolbench.graph import d2
+from fasthep_toolbench.install import install_plan_text, install_tool
 from fasthep_toolbench.model import ToolAvailability
 from fasthep_toolbench.tools import (
     ToolSpec,
@@ -15,6 +19,7 @@ from fasthep_toolbench.tools import (
     load_tool_binding,
     parse_tool_args,
     run_registered_tool,
+    tool_availability,
     tool_info,
     tool_info_text,
     tool_run_text,
@@ -186,11 +191,66 @@ def test_tool_info_reports_metadata() -> None:
 def test_d2_tool_info_reports_metadata() -> None:
     info = tool_info("d2", include_entry_points=False)
 
+    assert info["spec"].install["method"] == "github_release"
+    assert info["spec"].install["repo"] == "terrastruct/d2"
     assert info["spec"].install["docs"] == "https://d2lang.com/tour/install/"
     assert info["availability"]["executable"] == "d2"
     text = tool_info_text("d2", include_entry_points=False)
     assert "Tool: d2" in text
-    assert "Install method: install_script" in text
+    assert "Install method: github_release" in text
+
+
+def test_tool_availability_finds_project_local_binary(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(shutil, "which", lambda _: None)
+    binary = tmp_path / ".fasthep" / "bin" / "d2"
+    binary.parent.mkdir(parents=True)
+    binary.write_text("#!/bin/sh\n", encoding="utf-8")
+    binary.chmod(0o755)
+    binding = load_tool_binding("d2", include_entry_points=False)
+
+    availability = tool_availability(binding.spec, project_dir=tmp_path)
+
+    assert availability.available
+    assert availability.method == "install_dir"
+    assert availability.source == "project"
+    assert availability.path == str(binary)
+
+
+def test_install_tool_writes_versioned_binary_and_link(tmp_path: Path) -> None:
+    archive = tmp_path / "d2.tar.gz"
+    source = tmp_path / "source" / "d2"
+    source.parent.mkdir()
+    source.write_text("#!/bin/sh\n", encoding="utf-8")
+    source.chmod(0o755)
+    with tarfile.open(archive, "w:gz") as tar:
+        tar.add(source, arcname="d2")
+
+    def fake_downloader(spec: ToolSpec, destination: Path, version: str | None) -> tuple[Path, str]:
+        assert spec.name == "d2"
+        assert destination == tmp_path / ".fasthep" / "bin"
+        assert version is None
+        return archive, "0.7.0"
+
+    result = install_tool("d2", project_dir=tmp_path, downloader=fake_downloader)
+
+    assert result.binary == tmp_path / ".fasthep" / "bin" / "d2-0.7.0"
+    assert result.binary.exists()
+    assert result.binary.stat().st_mode & 0o111
+    assert result.link == tmp_path / ".fasthep" / "bin" / "d2"
+    assert result.link.is_symlink()
+    assert result.link.readlink() == Path("d2-0.7.0")
+    assert result.message == f"Installed d2 0.7.0 to {result.link}"
+
+
+def test_install_plan_text_reports_d2_source_and_path(tmp_path: Path) -> None:
+    text = install_plan_text("d2", install_dir=tmp_path / ".fasthep" / "bin")
+
+    assert "Tool: d2" in text
+    assert "Source: GitHub releases, terrastruct/d2" in text
+    assert f"Install path: {tmp_path / '.fasthep' / 'bin' / 'd2'}" in text
 
 
 def test_run_registered_tool_uses_dasgoclient_executor(

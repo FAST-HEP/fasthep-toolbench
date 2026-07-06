@@ -11,14 +11,15 @@ D2_SPEC = {
         "executable": "d2",
     },
     "install": {
-        "method": "install_script",
+        "method": "github_release",
+        "repo": "terrastruct/d2",
         "docs": "https://d2lang.com/tour/install/",
         "releases": "https://github.com/terrastruct/d2/releases",
     },
     "params": {
         "input": {"type": "string", "required": True},
         "output": {"type": "string", "required": False},
-        "format": {"type": "string", "default": "svg"},
+        "watch": {"type": "boolean", "default": False},
         "layout": {"type": "string", "required": False},
         "theme": {"type": "string", "required": False},
     },
@@ -32,7 +33,7 @@ def run_d2(
     *,
     input: str,
     output: str | None = None,
-    format: str = "svg",
+    watch: bool = False,
     layout: str | None = None,
     theme: str | None = None,
     availability: ToolAvailability | None = None,
@@ -42,13 +43,21 @@ def run_d2(
         if availability is not None and availability.path is not None
         else "d2"
     )
-    command = [executable, input]
-    if output:
-        command.append(output)
-    if format:
-        command.extend(["--format", format])
+
+    command = [executable]
+
+    if watch:
+        command.append("-w")
+
     if layout:
         command.extend(["--layout", layout])
+
     if theme:
         command.extend(["--theme", theme])
+
+    command.append(input)
+
+    if output:
+        command.append(output)
+
     return run_command(command)

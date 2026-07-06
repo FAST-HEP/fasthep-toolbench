@@ -115,6 +115,7 @@ class ToolAvailability:
     executable: str | None = None
     path: str | None = None
     message: str | None = None
+    source: str | None = None
 
 
 @dataclass(frozen=True)
