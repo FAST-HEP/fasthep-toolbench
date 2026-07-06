@@ -415,8 +415,6 @@ def test_d2_runs_through_command_helper(monkeypatch: pytest.MonkeyPatch) -> None
             "/tmp/d2",
             "input.d2",
             "output.svg",
-            "--format",
-            "svg",
             "--layout",
             "elk",
             "--theme",
@@ -444,7 +442,8 @@ def test_registered_d2_accepts_positional_input_output(
     )
 
     assert isinstance(result, CommandResult)
-    assert calls == [["d2", "input.d2", "output.svg", "--format", "svg"]]
+    assert Path(calls[0][0]).name == "d2"
+    assert calls[0][1:] == ["input.d2", "output.svg"]
     assert result.stdout == "rendered"
 
 

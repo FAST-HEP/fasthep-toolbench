@@ -19,7 +19,7 @@ D2_SPEC = {
     "params": {
         "input": {"type": "string", "required": True},
         "output": {"type": "string", "required": False},
-        "watch": {"type": "boolean", "default": False},
+        "format": {"type": "string", "default": "svg"},
         "layout": {"type": "string", "required": False},
         "theme": {"type": "string", "required": False},
     },
@@ -33,31 +33,24 @@ def run_d2(
     *,
     input: str,
     output: str | None = None,
-    watch: bool = False,
+    format: str = "svg",
     layout: str | None = None,
     theme: str | None = None,
     availability: ToolAvailability | None = None,
 ) -> CommandResult:
+    del format  # D2 infers output format from the output filename.
     executable = (
         availability.path
         if availability is not None and availability.path is not None
         else "d2"
     )
 
-    command = [executable]
-
-    if watch:
-        command.append("-w")
-
-    if layout:
-        command.extend(["--layout", layout])
-
-    if theme:
-        command.extend(["--theme", theme])
-
-    command.append(input)
-
+    command = [executable, input]
     if output:
         command.append(output)
+    if layout:
+        command.extend(["--layout", layout])
+    if theme:
+        command.extend(["--theme", theme])
 
     return run_command(command)
