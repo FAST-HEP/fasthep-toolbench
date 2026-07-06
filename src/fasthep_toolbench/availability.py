@@ -54,10 +54,25 @@ def _candidate_install_dirs(
     project_dir: Path | None,
     global_bin_dir: Path | None,
 ) -> list[tuple[str, Path]]:
-    project_root = project_dir or Path.cwd()
-    dirs = [("project", project_root / ".fasthep" / "bin")]
+    project_root = (project_dir or Path.cwd()).resolve()
+    dirs = [
+        (source, candidate)
+        for source, candidate in _project_install_dirs(project_root)
+    ]
     if global_bin_dir is not None:
         dirs.append(("global", global_bin_dir))
     else:
         dirs.append(("global", Path.home() / ".fasthep" / "bin"))
     return dirs
+
+
+def _project_install_dirs(project_root: Path) -> list[tuple[str, Path]]:
+    candidates: list[tuple[str, Path]] = []
+    seen: set[Path] = set()
+    for root in (project_root, *project_root.parents):
+        directory = root / ".fasthep" / "bin"
+        if directory in seen:
+            continue
+        seen.add(directory)
+        candidates.append(("project", directory))
+    return candidates

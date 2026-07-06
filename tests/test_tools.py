@@ -219,6 +219,27 @@ def test_tool_availability_finds_project_local_binary(
     assert availability.path == str(binary)
 
 
+def test_tool_availability_finds_parent_project_binary(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(shutil, "which", lambda _: None)
+    binary = tmp_path / ".fasthep" / "bin" / "d2"
+    binary.parent.mkdir(parents=True)
+    binary.write_text("#!/bin/sh\n", encoding="utf-8")
+    binary.chmod(0o755)
+    nested_project_dir = tmp_path / "workshop" / "tutorials"
+    nested_project_dir.mkdir(parents=True)
+    binding = load_tool_binding("d2", include_entry_points=False)
+
+    availability = tool_availability(binding.spec, project_dir=nested_project_dir)
+
+    assert availability.available
+    assert availability.method == "install_dir"
+    assert availability.source == "project"
+    assert availability.path == str(binary)
+
+
 def test_install_tool_writes_versioned_binary_and_link(tmp_path: Path) -> None:
     archive = tmp_path / "d2.tar.gz"
     source = tmp_path / "source" / "d2"
