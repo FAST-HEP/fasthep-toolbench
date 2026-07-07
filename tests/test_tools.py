@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import json
 import shutil
 import sys
 import tarfile
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -142,6 +144,103 @@ def test_tool_spec_from_obj_normalises_raw_spec() -> None:
         "type": "string",
         "default": "json",
     }
+
+
+def test_das_discovery_reads_lists_and_writes_json(tmp_path: Path) -> None:
+    list_dir = tmp_path / "list"
+    list_dir.mkdir()
+    (list_dir / "DATA.txt").write_text(
+        "##### JetMET #####\n"
+        "/JetMET0/Run2024C-MINIv6NANOv15-v1/NANOAOD\n",
+        encoding="utf-8",
+    )
+    (list_dir / "MC.txt").write_text(
+        "##### Hto2Zto4Nu #####\n"
+        "/TTH-Hto2Zto4Nu/RunIII2024Summer24NanoAODv15-v1/NANOAODSIM\n",
+        encoding="utf-8",
+    )
+
+    def fake_runner(
+        *,
+        query: str,
+        format: str | None,
+        timeout: int | float,
+        x509_proxy: str | None,
+    ) -> CommandResult:
+        assert timeout == 5
+        assert x509_proxy == str(tmp_path / "proxy")
+        payload: Any
+        if query.startswith("file dataset="):
+            assert format is None
+            return CommandResult(
+                command=["dasgoclient", "--query", query],
+                exit_code=0,
+                stdout="\n/store/example.root\n\n",
+                stderr="",
+            )
+        assert format == "json"
+        if query.startswith("parent dataset="):
+            payload = [{"parent": [{"name": "/Parent/Dataset/RAW"}]}]
+        else:
+            payload = [
+                {
+                    "dataset": [
+                        {
+                            "name": query.removeprefix("dataset dataset="),
+                            "nevents": 10,
+                            "num_file": 1,
+                            "num_lumi": 2,
+                            "size": 100,
+                        }
+                    ]
+                }
+            ]
+        return CommandResult(
+            command=["dasgoclient", "--query", query, "--format", "json"],
+            exit_code=0,
+            stdout=json.dumps(payload),
+            stderr="",
+        )
+
+    paths = das.discover_das_datasets(
+        list_dir=list_dir,
+        output_dir=tmp_path,
+        era="RunIII2024Summer24",
+        version="v15",
+        x509_proxy=tmp_path / "proxy",
+        timeout=5,
+        runner=fake_runner,
+    )
+
+    datasets = json.loads(paths["datasets"].read_text(encoding="utf-8"))
+    files = json.loads(paths["files"].read_text(encoding="utf-8"))
+    cross_sections = json.loads(
+        paths["cross_sections"].read_text(encoding="utf-8")
+    )
+    combined = json.loads(paths["combined"].read_text(encoding="utf-8"))
+
+    assert datasets["datasets"][0]["group"] == "JetMET"
+    assert datasets["datasets"][0]["kind"] == "data"
+    assert datasets["datasets"][0]["tier"] == "NANOAOD"
+    assert datasets["datasets"][0]["parent"] == "/Parent/Dataset/RAW"
+    assert datasets["datasets"][0]["das"][0]["dataset"][0]["num_file"] == 1
+    assert files[0] == {
+        "dataset": "/JetMET0/Run2024C-MINIv6NANOv15-v1/NANOAOD",
+        "files": ["/store/example.root"],
+    }
+    assert cross_sections["cross_sections"][0]["status"] == "not_applicable"
+    assert cross_sections["cross_sections"][1]["status"] == "missing"
+    assert combined["samples"][0]["files"] == [
+        {
+            "path": "/store/example.root",
+            "uris": {
+                "global_xrootd": (
+                    "root://cms-xrd-global.cern.ch///store/example.root"
+                ),
+            },
+        }
+    ]
+    assert combined["samples"][1]["status"]["cross_section"] == "missing"
 
 
 def test_parse_tool_args_accepts_positional_and_options() -> None:

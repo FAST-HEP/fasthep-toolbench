@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from io import StringIO
 
@@ -39,6 +39,7 @@ def run_command(
     command: Sequence[str],
     *,
     timeout: int | float | None = None,
+    env: Mapping[str, str] | None = None,
 ) -> CommandResult:
     """
     Run an external command on a Unix-like OS.
@@ -61,6 +62,7 @@ def run_command(
             _ok_code=list(range(256)),
             _return_cmd=True,
             _timeout=timeout,
+            _env=dict(env) if env is not None else None,
         )
     except sh.CommandNotFound:
         return CommandResult(

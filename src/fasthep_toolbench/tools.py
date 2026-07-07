@@ -3,6 +3,7 @@ from __future__ import annotations
 from fasthep_toolbench.api import list_registered_tools, run_registered_tool, tool_info
 from fasthep_toolbench.args import parse_tool_args
 from fasthep_toolbench.availability import tool_availability
+from fasthep_toolbench.cms.das import discover_das_datasets, read_dataset_list
 from fasthep_toolbench.command import CommandResult, run_command
 from fasthep_toolbench.format import tool_info_text, tool_run_text, tools_list_text
 from fasthep_toolbench.install import (
@@ -38,6 +39,7 @@ __all__ = [
     "ToolSpec",
     "default_global_bin_dir",
     "default_tool_registry_config",
+    "discover_das_datasets",
     "discover_tool_registry_configs",
     "install_plan_text",
     "install_tool",
@@ -49,6 +51,7 @@ __all__ = [
     "normalize_global_bin_dir",
     "parse_tool_args",
     "project_bin_dir",
+    "read_dataset_list",
     "resolve_tool_registry_config",
     "run_command",
     "run_registered_tool",
