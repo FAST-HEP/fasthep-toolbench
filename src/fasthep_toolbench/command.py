@@ -38,7 +38,7 @@ class CommandResult:
 def run_command(
     command: Sequence[str],
     *,
-    timeout: int | float | None = None,
+    timeout: float | None = None,
     env: Mapping[str, str] | None = None,
 ) -> CommandResult:
     """

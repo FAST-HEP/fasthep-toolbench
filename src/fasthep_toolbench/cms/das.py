@@ -39,7 +39,7 @@ def run_dasgoclient(
     *,
     query: str,
     format: str | None = "json",
-    timeout: int | float | str = 60,
+    timeout: float | str = 60,
     x509_proxy: str | None = None,
     availability: ToolAvailability | None = None,
 ) -> CommandResult:
@@ -75,7 +75,7 @@ def discover_das_datasets(
     era: str,
     version: str,
     x509_proxy: Path | None = None,
-    timeout: int | float = 60,
+    timeout: float = 60,
     runner: Callable[..., CommandResult] = run_dasgoclient,
 ) -> dict[str, Path]:
     """Discover DAS metadata and file lists from pyRAT-style DATA/MC lists."""
@@ -191,7 +191,7 @@ def _run_das_json(
     runner: Callable[..., CommandResult],
     query: str,
     *,
-    timeout: int | float,
+    timeout: float,
     x509_proxy: str | None,
 ) -> dict[str, Any]:
     result = runner(
@@ -224,7 +224,7 @@ def _run_das_text(
     runner: Callable[..., CommandResult],
     query: str,
     *,
-    timeout: int | float,
+    timeout: float,
     x509_proxy: str | None,
 ) -> dict[str, Any]:
     result = runner(

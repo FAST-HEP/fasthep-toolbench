@@ -164,7 +164,7 @@ def test_das_discovery_reads_lists_and_writes_json(tmp_path: Path) -> None:
         *,
         query: str,
         format: str | None,
-        timeout: int | float,
+        timeout: float,
         x509_proxy: str | None,
     ) -> CommandResult:
         assert timeout == 5
@@ -379,7 +379,7 @@ def test_run_registered_tool_uses_dasgoclient_executor(
     def fake_run_command(
         command: list[str],
         *,
-        timeout: int | float | None = None,  # noqa: ARG001
+        timeout: float | None = None,  # noqa: ARG001
     ) -> CommandResult:
         return CommandResult(
             command=command,
@@ -413,7 +413,7 @@ def test_tool_run_text_formats_structured_result(
     def fake_run_command(
         command: list[str],
         *,
-        timeout: int | float | None = None,  # noqa: ARG001
+        timeout: float | None = None,  # noqa: ARG001
     ) -> CommandResult:
         return CommandResult(command=command, exit_code=0, stdout="[]\n", stderr="")
 
@@ -473,7 +473,7 @@ def test_dasgoclient_runs_through_command_helper(
     def fake_run_command(
         command: list[str],
         *,
-        timeout: int | float | None = None,
+        timeout: float | None = None,
     ) -> CommandResult:
         calls.append((command, timeout))
         return CommandResult(
