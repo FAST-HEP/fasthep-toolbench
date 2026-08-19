@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+import datetime
 import hashlib
 import inspect
 from collections.abc import Callable
-from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -49,9 +49,9 @@ def get_file_hash(file: Path) -> str:
         return hashlib.file_digest(f, "sha256").hexdigest()[:8]
 
 
-def formatted_today(timezone: datetime.tzinfo=datetime.timezone.utc) -> str:
+def formatted_today(timezone: datetime.tzinfo=datetime.UTC) -> str:
     """Return the current date in the format YYYY.MM.DD"""
-    return datetime.now(tz=timezone).strftime(DEFAULT_DATE_FORMAT)
+    return datetime.datetime.now(tz=timezone).strftime(DEFAULT_DATE_FORMAT)
 
 
 def calculate_function_hash(func: Callable[..., Any], *args, **kwargs) -> str:  # type: ignore[no-untyped-def]
