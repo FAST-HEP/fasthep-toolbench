@@ -49,9 +49,9 @@ def get_file_hash(file: Path) -> str:
         return hashlib.file_digest(f, "sha256").hexdigest()[:8]
 
 
-def formatted_today() -> str:
+def formatted_today(timezone: datetime.tzinfo=datetime.timezone.utc) -> str:
     """Return the current date in the format YYYY.MM.DD"""
-    return datetime.now().strftime(DEFAULT_DATE_FORMAT)
+    return datetime.now(tz=timezone).strftime(DEFAULT_DATE_FORMAT)
 
 
 def calculate_function_hash(func: Callable[..., Any], *args, **kwargs) -> str:  # type: ignore[no-untyped-def]
