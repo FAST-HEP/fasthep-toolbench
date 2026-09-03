@@ -109,17 +109,3 @@ Special thanks to the gracious help of FAST-HEP contributors:
 	<tbody>
 </table>
 <!-- readme: collaborators,contributors -end -->
-
-## Previous iterations of this software
-
-This software is a continuation of the work done in the
-[fasthep-toolbench](https://github.com/FAST-HEP/fasthep-toolbench/tree/kreczko-1.0.0a1)
-and [fast-toolbench](https://github.com/FAST-HEP/fast-toolbench) repositories.
-The original code was developed by [Ben Krikler](https://github.com/benkrikler)
-and has been adapted and improved by
-[various collaborators](https://github.com/FAST-HEP/fast-toolbench/graphs/contributors).
-The new version of the software is designed to be more flexible and extensible,
-allowing users to easily create custom data processing pipelines.
-
-Part of the development of this software was funded by the
-[IRIS Digital Assets grant](https://www.iris.ac.uk/).
