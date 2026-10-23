@@ -58,7 +58,15 @@ cross-package use.
 - `src/fasthep_toolbench/graph/d2.py` - D2 external-tool adapter.
 - `src/fasthep_toolbench/http/download.py` - HTTP download helpers.
 - `src/fasthep_toolbench/package/` - package import and version discovery
-  helpers.
+  helpers; `package/environment.py` holds the pure environment and git-state
+  inspection (`python_info`, `installed_distributions`, `distribution_info`,
+  `git_state`, `find_lockfile`).
+- `src/fasthep_toolbench/misc.py` - small shared helpers, including the file
+  hashing functions `file_sha256` and `file_fingerprint` (the one place to hash
+  files; do not add copies elsewhere).
+- `src/fasthep_toolbench/_optional.py` - helpers for the optional dependencies
+  (`rich`, `httpx`, `tabulate` are extras): missing-extra errors, `require_httpx`,
+  and a spinner that is a no-op without `rich`.
 - `src/fasthep_toolbench/display/` and `src/fasthep_toolbench/format.py` -
   reusable display and structured text formatting helpers.
 - `tests/test_tools.py` - registry, command, DAS, D2, install, and formatting
@@ -109,6 +117,17 @@ mappings whenever workflow consumers need machine-readable output.
 
 Use public Flow extension contracts when Toolbench data is consumed by Flow
 profiles or workflows. Do not import Flow compiler internals from Toolbench.
+
+## Optional dependencies
+
+The hard dependencies are `loguru`, `pyyaml` and `sh`. `rich` and `tabulate` belong to
+the `display` extra and `httpx` to the `http` extra. Keep `package/environment.py`,
+`misc.py`, `command.py` and the registry modules free of imports of these packages (and of
+UI and network code), so that Flow and other core packages can depend on Toolbench
+without them. Import an optional dependency inside the function that uses it (with
+`# noqa: PLC0415` and the reason) or behind a guarded top-level import that raises
+`ImportError` naming the extra (see `_optional.py`); do not use the Python 3.15
+`lazy import` syntax while older Pythons are supported.
 
 ## External Boundaries
 
