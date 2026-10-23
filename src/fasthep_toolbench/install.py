@@ -16,8 +16,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import Any
 
-import httpx
-
+from fasthep_toolbench._optional import require_httpx
 from fasthep_toolbench.loader import load_tool_binding
 from fasthep_toolbench.model import ToolSpec
 
@@ -97,6 +96,7 @@ def download_d2_release_asset(
     destination: Path,
     version: str | None,
 ) -> tuple[Path, str]:
+    httpx = require_httpx()
     repo = str(spec.install.get("repo", "terrastruct/d2"))
     release = _github_release(repo, version)
     tag = str(release["tag_name"])
@@ -113,6 +113,7 @@ def download_d2_release_asset(
 
 
 def _github_release(repo: str, version: str | None) -> Mapping[str, Any]:
+    httpx = require_httpx()
     suffix = "latest" if version is None else f"tags/{version}"
     url = f"https://api.github.com/repos/{repo}/releases/{suffix}"
     response = httpx.get(url, follow_redirects=True, timeout=60)

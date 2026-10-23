@@ -28,22 +28,37 @@ classifiers = [
 ]
 dynamic = ["version"]
 dependencies = [
-  "httpx",
   "loguru",
   "pyyaml",
-  "rich",
   "sh",
-  "tabulate",
 ]
 
 [project.optional-dependencies]
+display = [
+  "rich",
+  "tabulate",
+]
+http = [
+  "httpx",
+]
+all = [
+  "httpx",
+  "rich",
+  "tabulate",
+]
 test = [
+  "httpx",
   "pytest >=6",
   "pytest-cov >=3",
+  "rich",
+  "tabulate",
 ]
 dev = [
+  "httpx",
   "pytest >=6",
   "pytest-cov >=3",
+  "rich",
+  "tabulate",
 ]
 docs = [
   "sphinx>=7.0",
