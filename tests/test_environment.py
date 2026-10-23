@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import os
 import platform
 import shutil
 import subprocess
@@ -278,3 +279,82 @@ def test_find_lockfile_prefers_pixi_over_uv(tmp_path: Path) -> None:
 
 def test_find_lockfile_without_one_is_none(tmp_path: Path) -> None:
     assert find_lockfile(tmp_path) is None
+
+
+def test_distribution_info_removes_credentials_from_the_url(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    direct = (
+        '{"url": "https://user:tok3n@github.com/FAST-HEP/fasthep-flow.git",'
+        ' "vcs_info": {"vcs": "git", "commit_id": "abc123"}}'
+    )
+    _patch_distribution(monkeypatch, FakeDistribution("fasthep-flow", "1", direct))
+
+    info = distribution_info("fasthep-flow")
+
+    assert info is not None
+    assert info.direct_url is not None
+    assert info.direct_url.url == "https://github.com/FAST-HEP/fasthep-flow.git"
+    assert "tok3n" not in str(info.to_dict())
+
+
+def test_distribution_info_keeps_urls_without_credentials_unchanged(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    direct = '{"url": "https://github.com:443/FAST-HEP/x.git?ref=main"}'
+    _patch_distribution(monkeypatch, FakeDistribution("x", "1", direct))
+
+    info = distribution_info("x")
+
+    assert info is not None
+    assert info.direct_url is not None
+    assert info.direct_url.url == "https://github.com:443/FAST-HEP/x.git?ref=main"
+
+
+class UnreadableDistribution(FakeDistribution):
+    def __init__(self, error: Exception) -> None:
+        super().__init__("proj", "1")
+        self._error = error
+
+    def read_text(self, _filename: str) -> str | None:
+        raise self._error
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        UnicodeDecodeError("utf-8", b"\xff", 0, 1, "invalid start byte"),
+        PermissionError("denied"),
+    ],
+)
+def test_distribution_info_survives_an_unreadable_direct_url_file(
+    monkeypatch: pytest.MonkeyPatch, error: Exception
+) -> None:
+    _patch_distribution(monkeypatch, UnreadableDistribution(error))
+
+    info = distribution_info("proj")
+
+    assert info is not None
+    assert info.direct_url is None
+    assert info.note is not None
+    assert "direct_url.json" in info.note
+    assert "unreadable" in info.note
+
+
+def test_git_state_disables_repository_controlled_code_and_index_writes(
+    tmp_path: Path,
+) -> None:
+    calls: list[tuple[list[str], dict[str, Any]]] = []
+
+    def run(command: Any, **kwargs: Any) -> CommandResult:
+        calls.append((list(command), kwargs))
+        return CommandResult(list(command), 0, "abc\n" if "rev-parse" in command else "", "")
+
+    git_state(tmp_path, runner=run)
+
+    assert len(calls) == 3
+    for command, kwargs in calls:
+        assert command[:2] == ["git", "--no-optional-locks"]
+        assert "core.fsmonitor=false" in command
+        assert kwargs["env"]["LC_ALL"] == "C"
+        assert kwargs["env"].get("PATH") == os.environ.get("PATH")

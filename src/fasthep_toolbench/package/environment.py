@@ -9,6 +9,7 @@ lock file, ``pixi`` or ``conda`` (a plain ``pip install`` environment must work)
 from __future__ import annotations
 
 import json
+import os
 import platform
 import re
 import sys
@@ -17,7 +18,7 @@ from dataclasses import asdict, dataclass
 from importlib import metadata
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urlsplit, urlunsplit
 from urllib.request import url2pathname
 
 from fasthep_toolbench.command import CommandResult, run_command
@@ -116,7 +117,10 @@ def distribution_info(name: str) -> DistributionInfo | None:
 
 
 def _read_direct_url(dist: Any) -> tuple[DirectUrl | None, str | None, str | None]:
-    text = dist.read_text("direct_url.json")
+    try:
+        text = dist.read_text("direct_url.json")
+    except (OSError, UnicodeDecodeError) as exc:
+        return None, None, f"direct_url.json is unreadable ({type(exc).__name__})"
     if text is None:
         return None, None, None
     try:
@@ -132,7 +136,7 @@ def _read_direct_url(dist: Any) -> tuple[DirectUrl | None, str | None, str | Non
     editable = bool(dir_info.get("editable"))
     url = data["url"]
     direct = DirectUrl(
-        url=url,
+        url=_redact_url(url),
         vcs=vcs_info.get("vcs"),
         commit_id=vcs_info.get("commit_id"),
         editable=editable,
@@ -143,6 +147,14 @@ def _read_direct_url(dist: Any) -> tuple[DirectUrl | None, str | None, str | Non
         if parsed.scheme == "file":
             editable_path = url2pathname(parsed.path)
     return direct, editable_path, None
+
+
+def _redact_url(url: str) -> str:
+    """Remove ``user:password@`` from a URL: the result is recorded in manifests."""
+    parts = urlsplit(url)
+    if "@" not in parts.netloc:
+        return url
+    return urlunsplit(parts._replace(netloc=parts.netloc.rsplit("@", 1)[1]))
 
 
 def git_state(
@@ -156,11 +168,25 @@ def git_state(
     ``dirty`` means tracked files differ from ``HEAD`` (untracked files are ignored). When
     ``git`` is missing, times out, refuses to run (for example "dubious ownership") or the
     path is not in a repository, the affected values are ``None`` and ``note`` says why.
+
+    Every call runs with ``core.fsmonitor`` disabled (a repository can configure a program to
+    be run by ``git status``) and ``--no-optional-locks`` (no index writes on read-only or
+    shared trees), and with ``LC_ALL=C`` so that the notes do not depend on the locale.
     """
     target = str(path)
+    env = {**os.environ, "LC_ALL": "C"}
 
     def git(*args: str) -> CommandResult:
-        return runner(["git", "-C", target, *args], timeout=timeout)
+        command = [
+            "git",
+            "--no-optional-locks",
+            "-C",
+            target,
+            "-c",
+            "core.fsmonitor=false",
+            *args,
+        ]
+        return runner(command, timeout=timeout, env=env)
 
     top = git("rev-parse", "--show-toplevel")
     if not top.ok:
