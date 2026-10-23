@@ -3,6 +3,7 @@ from __future__ import annotations
 import datetime
 import hashlib
 import inspect
+import os
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -42,11 +43,26 @@ def string_to_short_hash(string: str) -> str:
     return hashlib.sha1(string.encode()).hexdigest()[:8]
 
 
+def file_fingerprint(path: Path | str) -> tuple[str, int]:
+    """Return the full sha256 hex digest and the size in bytes of a file.
+
+    The file is hashed in chunks (never read into memory at once). Errors from opening the
+    file (missing file, directory, permissions) are raised unchanged.
+    """
+    with Path(path).open("rb") as f:
+        # requires Python 3.11+
+        digest = hashlib.file_digest(f, "sha256").hexdigest()
+        return digest, os.fstat(f.fileno()).st_size
+
+
+def file_sha256(path: Path | str) -> str:
+    """Return the full sha256 hex digest of a file."""
+    return file_fingerprint(path)[0]
+
+
 def get_file_hash(file: Path) -> str:
     """Reads the config file and returns a shortened hash."""
-    with file.open("rb") as f:
-        # requires Python 3.11+
-        return hashlib.file_digest(f, "sha256").hexdigest()[:8]
+    return file_sha256(file)[:8]
 
 
 def formatted_today(timezone: datetime.tzinfo=datetime.UTC) -> str:
