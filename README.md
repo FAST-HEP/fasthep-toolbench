@@ -58,6 +58,37 @@ You can install `fasthep-toolbench` using `pip`:
 pip install fasthep-toolbench
 ```
 
+The core package needs only `loguru`, `pyyaml` and `sh`. Features that use heavier libraries
+are optional extras:
+
+| Extra | Installs | Enables |
+|---|---|---|
+| `display` | `rich`, `tabulate` | `fasthep_toolbench.display` (tables and formatted output), progress spinners |
+| `http` | `httpx` | `fasthep_toolbench.http` (downloads) and the tool installers (for example D2) |
+| `all` | all of the above | everything |
+
+```bash
+pip install "fasthep-toolbench[display,http]"
+```
+
+Importing a module that needs a missing extra raises an `ImportError` that names it.
+Progress spinners are skipped when `rich` is not installed. A package that imports
+`fasthep_toolbench.display` or `fasthep_toolbench.http` (for example `fasthep-cli`, and the
+`fasthep` metapackage that installs it) must depend on `fasthep-toolbench[display,http]` (or
+`[all]`); packages that only use the command execution, tool registry and environment helpers
+can depend on the bare package.
+
+## Environment inspection
+
+`fasthep_toolbench.package` also provides quiet, import-safe helpers that describe the
+running environment, using `importlib.metadata` and `git` only (no lock file, `pixi` or
+`conda` is needed): `python_info`, `installed_distributions`, `distribution_info`
+(including `direct_url.json` data such as the VCS commit of an installed distribution),
+`git_state` (its `dirty` flag means tracked files differ from `HEAD`; untracked files are
+ignored; git runs with `core.fsmonitor` disabled and without optional locks) and
+`find_lockfile`. URLs from `direct_url.json` are recorded without credentials. `fasthep_toolbench.misc` has `file_sha256` and
+`file_fingerprint` (full sha256 and size) for hashing files.
+
 ## Contributing
 
 You had a look and are interested to contribute? That's great! There are three

@@ -6,9 +6,15 @@ from enum import StrEnum
 from itertools import cycle
 from typing import Any
 
-from rich.console import Console
-from rich.table import Table
-from tabulate import tabulate
+from fasthep_toolbench._optional import missing_extra
+
+try:
+    from rich.console import Console
+    from rich.table import Table
+    from tabulate import tabulate
+except ImportError as exc:
+    feature = "fasthep_toolbench.display"
+    raise missing_extra(feature, "display") from exc
 
 
 class DisplayFormats(StrEnum):

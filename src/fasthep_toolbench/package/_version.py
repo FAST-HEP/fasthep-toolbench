@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable, Iterator
 from importlib.metadata import distributions
 
-from rich.progress import Progress, SpinnerColumn, TextColumn
+from fasthep_toolbench._optional import spinner_progress
 
 
 def __find_package_versions(
@@ -14,11 +14,7 @@ def __find_package_versions(
     """
     Find the versions of a list of packages
     """
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        transient=True,
-    ) as progress:
+    with spinner_progress() as progress:
         task = progress.add_task("Finding packages...", total=0)
 
         for dist in distributions():

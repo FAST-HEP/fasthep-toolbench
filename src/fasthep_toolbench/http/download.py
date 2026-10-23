@@ -6,8 +6,13 @@ import json
 from pathlib import Path
 from typing import Literal
 
-import httpx
-from rich.progress import Progress, SpinnerColumn, TextColumn
+from fasthep_toolbench._optional import missing_extra, spinner_progress
+
+try:
+    import httpx
+except ImportError as exc:
+    feature = "fasthep_toolbench.http"
+    raise missing_extra(feature, "http") from exc
 
 DownloadStatus = Literal["downloaded", "skipped"]
 
@@ -39,11 +44,7 @@ def download_from_json(json_input: str, destination: str, force: bool = False) -
         data = json.load(json_file)
     if not dst.exists():
         dst.mkdir(parents=True, exist_ok=True)
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        transient=True,
-    ) as progress:
+    with spinner_progress() as progress:
         task = progress.add_task("Downloading files...", total=len(data))
         downloaded = 0
         skipped = 0
