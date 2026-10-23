@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import datetime
+import datetime as dt
 import hashlib
 import inspect
 import os
@@ -65,9 +65,9 @@ def get_file_hash(file: Path) -> str:
     return file_sha256(file)[:8]
 
 
-def formatted_today(timezone: datetime.tzinfo=datetime.UTC) -> str:
+def formatted_today(timezone: dt.tzinfo = dt.UTC) -> str:
     """Return the current date in the format YYYY.MM.DD"""
-    return datetime.datetime.now(tz=timezone).strftime(DEFAULT_DATE_FORMAT)
+    return dt.datetime.now(tz=timezone).strftime(DEFAULT_DATE_FORMAT)
 
 
 def calculate_function_hash(func: Callable[..., Any], *args, **kwargs) -> str:  # type: ignore[no-untyped-def]
