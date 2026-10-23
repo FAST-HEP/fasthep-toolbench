@@ -358,3 +358,121 @@ def test_git_state_disables_repository_controlled_code_and_index_writes(
         assert "core.fsmonitor=false" in command
         assert kwargs["env"]["LC_ALL"] == "C"
         assert kwargs["env"].get("PATH") == os.environ.get("PATH")
+
+
+def test_git_state_drops_inherited_git_location_variables(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    for name in ("GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_COMMON_DIR"):
+        monkeypatch.setenv(name, "/somewhere/else")
+    seen: list[dict[str, str]] = []
+
+    def run(command: Any, **kwargs: Any) -> CommandResult:
+        seen.append(kwargs["env"])
+        return CommandResult(list(command), 1, "", "stop")
+
+    git_state(tmp_path, runner=run)
+
+    assert seen
+    for env in seen:
+        for name in ("GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_COMMON_DIR"):
+            assert name not in env
+
+
+@requires_git
+def test_git_state_ignores_an_inherited_git_dir(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    repo = _repository(tmp_path / "repo")
+    monkeypatch.setenv("GIT_DIR", str(tmp_path / "does-not-exist"))
+
+    state = git_state(repo)
+
+    assert state.revision is not None
+    assert state.root == str(repo.resolve())
+
+
+def test_git_state_turns_a_raising_runner_into_a_note(tmp_path: Path) -> None:
+    def run(_command: Any, **_kwargs: Any) -> CommandResult:
+        msg = "boom\nsecond line"
+        raise RuntimeError(msg)
+
+    state = git_state(tmp_path, runner=run)
+
+    assert (state.root, state.revision, state.dirty) == (None, None, None)
+    assert state.note is not None
+    assert "RuntimeError" in state.note
+    assert "second line" not in state.note
+
+
+def test_git_state_keeps_root_and_revision_when_a_later_call_raises(
+    tmp_path: Path,
+) -> None:
+    calls = {"n": 0}
+
+    def run(command: Any, **_kwargs: Any) -> CommandResult:
+        calls["n"] += 1
+        if calls["n"] == 3:
+            msg = "killed"
+            raise RuntimeError(msg)
+        return CommandResult(list(command), 0, "abc\n", "")
+
+    state = git_state(tmp_path, runner=run)
+
+    assert state.revision == "abc"
+    assert state.dirty is None
+    assert state.note is not None
+
+
+class UnreadableFileDistribution(FakeDistribution):
+    """read_text hides a read failure by returning None (as PathDistribution does)."""
+
+    def __init__(self, located: Path) -> None:
+        super().__init__("proj", "1")
+        self._located = located
+
+    def locate_file(self, _path: str) -> Path:
+        return self._located
+
+
+def test_distribution_info_notes_an_existing_but_unreadable_direct_url_file(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    existing = tmp_path / "direct_url.json"
+    existing.write_text("{}", encoding="utf-8")
+    _patch_distribution(monkeypatch, UnreadableFileDistribution(existing))
+
+    info = distribution_info("proj")
+
+    assert info is not None
+    assert info.direct_url is None
+    assert info.note is not None
+    assert "unreadable" in info.note
+
+
+def test_distribution_info_without_a_direct_url_file_has_no_note(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    _patch_distribution(
+        monkeypatch, UnreadableFileDistribution(tmp_path / "direct_url.json")
+    )
+
+    info = distribution_info("proj")
+
+    assert info is not None
+    assert info.direct_url is None
+    assert info.note is None
+
+
+def test_distribution_info_keeps_only_string_vcs_values(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    direct = '{"url": "https://h/x.git", "vcs_info": {"vcs": 1, "commit_id": ["a"]}}'
+    _patch_distribution(monkeypatch, FakeDistribution("x", "1", direct))
+
+    info = distribution_info("x")
+
+    assert info is not None
+    assert info.direct_url is not None
+    assert info.direct_url.vcs is None
+    assert info.direct_url.commit_id is None

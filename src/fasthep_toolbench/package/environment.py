@@ -25,6 +25,18 @@ from fasthep_toolbench.command import CommandResult, run_command
 from fasthep_toolbench.misc import file_fingerprint
 
 LOCKFILE_CANDIDATES = ("pixi.lock", "uv.lock", "poetry.lock", "Pipfile.lock")
+# Variables that tell git where the repository is. An inherited one (for example inside a git
+# hook) would override ``-C`` and make git_state describe another repository.
+GIT_LOCATION_VARIABLES = (
+    "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+    "GIT_COMMON_DIR",
+    "GIT_DIR",
+    "GIT_INDEX_FILE",
+    "GIT_NAMESPACE",
+    "GIT_OBJECT_DIRECTORY",
+    "GIT_PREFIX",
+    "GIT_WORK_TREE",
+)
 
 
 @dataclass(frozen=True)
@@ -116,13 +128,22 @@ def distribution_info(name: str) -> DistributionInfo | None:
     )
 
 
+def _unreadable_note(dist: Any) -> str | None:
+    try:
+        exists = Path(str(dist.locate_file("direct_url.json"))).exists()
+    except (AttributeError, NotImplementedError, OSError, TypeError, ValueError):
+        return None
+    return "direct_url.json is unreadable (the file exists but could not be read)" if exists else None
+
+
 def _read_direct_url(dist: Any) -> tuple[DirectUrl | None, str | None, str | None]:
     try:
         text = dist.read_text("direct_url.json")
     except (OSError, UnicodeDecodeError) as exc:
         return None, None, f"direct_url.json is unreadable ({type(exc).__name__})"
     if text is None:
-        return None, None, None
+        # PathDistribution.read_text hides read errors by returning None
+        return None, None, _unreadable_note(dist)
     try:
         data = json.loads(text)
     except ValueError:
@@ -135,10 +156,12 @@ def _read_direct_url(dist: Any) -> tuple[DirectUrl | None, str | None, str | Non
     dir_info: dict[str, Any] = raw_dir if isinstance(raw_dir, dict) else {}
     editable = bool(dir_info.get("editable"))
     url = data["url"]
+    vcs = vcs_info.get("vcs")
+    commit_id = vcs_info.get("commit_id")
     direct = DirectUrl(
         url=_redact_url(url),
-        vcs=vcs_info.get("vcs"),
-        commit_id=vcs_info.get("commit_id"),
+        vcs=vcs if isinstance(vcs, str) else None,
+        commit_id=commit_id if isinstance(commit_id, str) else None,
         editable=editable,
     )
     editable_path = None
@@ -171,10 +194,13 @@ def git_state(
 
     Every call runs with ``core.fsmonitor`` disabled (a repository can configure a program to
     be run by ``git status``) and ``--no-optional-locks`` (no index writes on read-only or
-    shared trees), and with ``LC_ALL=C`` so that the notes do not depend on the locale.
+    shared trees), with ``LC_ALL=C`` so that the notes do not depend on the locale, and
+    without the inherited variables that locate a repository (``GIT_DIR`` and friends), so that
+    the path given is the one described. An exception from the runner becomes a note too.
     """
     target = str(path)
-    env = {**os.environ, "LC_ALL": "C"}
+    env = {k: v for k, v in os.environ.items() if k not in GIT_LOCATION_VARIABLES}
+    env["LC_ALL"] = "C"
 
     def git(*args: str) -> CommandResult:
         command = [
@@ -186,7 +212,12 @@ def git_state(
             "core.fsmonitor=false",
             *args,
         ]
-        return runner(command, timeout=timeout, env=env)
+        try:
+            return runner(command, timeout=timeout, env=env)
+        except Exception as exc:  # noqa: BLE001 - git_state never raises
+            first_line = (str(exc).strip().splitlines() or [""])[0]
+            detail = f"{type(exc).__name__}: {first_line}" if first_line else type(exc).__name__
+            return CommandResult(command, 1, "", f"git could not be run ({detail})")
 
     top = git("rev-parse", "--show-toplevel")
     if not top.ok:
