@@ -4,6 +4,7 @@
 :maxdepth: 2
 :hidden:
 
+changelog
 ```
 
 ```{include} ../README.md
