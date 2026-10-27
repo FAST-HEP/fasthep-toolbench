@@ -28,6 +28,11 @@ Add new entries under `## [Unreleased]`, in the category they belong to. At rele
 
 ### Fixed
 
+- `run_command` no longer fails when called from a process that already has other threads
+  running (for example `fasthep-render`'s D2 graph compile hook during a real workflow compile).
+  `sh` forks to exec the external command, and CPython warns whenever `fork()` runs in a
+  multi-threaded process; that specific, known-safe warning is now suppressed instead of
+  propagating as an exception under strict `filterwarnings = ["error"]` test suites.
 - `git_state` and `distribution_info` are now robust against adverse environments: an inherited
   `GIT_DIR`/`GIT_WORK_TREE`/`GIT_INDEX_FILE` no longer redirects git calls to the wrong repository,
   git calls no longer run repository-configured hooks or write a shared/read-only index, diagnostic

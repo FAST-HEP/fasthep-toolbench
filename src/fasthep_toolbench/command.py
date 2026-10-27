@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import warnings
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from io import StringIO
@@ -55,15 +56,26 @@ def run_command(
     stdout = StringIO()
     stderr = StringIO()
     try:
-        completed = sh.Command(executable)(
-            *args,
-            _out=stdout,
-            _err=stderr,
-            _ok_code=list(range(256)),
-            _return_cmd=True,
-            _timeout=timeout,
-            _env=dict(env) if env is not None else None,
-        )
+        with warnings.catch_warnings():
+            # `sh` forks to exec the external command, and CPython warns whenever
+            # fork() runs in a multi-threaded process. The fork-then-immediately-exec
+            # pattern `sh` uses here is the safe case that warning doesn't target;
+            # callers running alongside other threads (as fasthep-render's D2 compile
+            # hook does) shouldn't fail a strict `filterwarnings = ["error"]` suite on it.
+            warnings.filterwarnings(
+                "ignore",
+                message=r".*is multi-threaded, use of fork\(\) may lead to deadlocks.*",
+                category=DeprecationWarning,
+            )
+            completed = sh.Command(executable)(
+                *args,
+                _out=stdout,
+                _err=stderr,
+                _ok_code=list(range(256)),
+                _return_cmd=True,
+                _timeout=timeout,
+                _env=dict(env) if env is not None else None,
+            )
     except sh.CommandNotFound:
         return CommandResult(
             command=[executable, *args],

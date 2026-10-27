@@ -4,11 +4,13 @@ import json
 import shutil
 import sys
 import tarfile
+import warnings
 from pathlib import Path
 from typing import Any
 
 import pytest
 
+from fasthep_toolbench import command as command_module
 from fasthep_toolbench.cms import das
 from fasthep_toolbench.command import CommandResult, run_command
 from fasthep_toolbench.graph import d2
@@ -80,6 +82,36 @@ def test_run_command_reports_missing_executable() -> None:
     assert not result.ok
     assert result.exit_code == 127
     assert result.stderr == "Command not found: definitely-not-a-fasthep-command"
+
+
+def test_run_command_survives_fork_multithreaded_deprecation_warning(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    # `sh` forks to exec the external command; CPython warns when fork() runs in a
+    # multi-threaded process, even for the safe fork-then-immediately-exec pattern `sh`
+    # uses here. Callers like fasthep-render's D2 compile hook run with other threads
+    # already alive, and strict `filterwarnings = ["error"]` suites must not fail on it.
+    class _FakeCompletedCommand:
+        exit_code = 0
+
+    class _FakeShCommand:
+        def __init__(self, executable: str) -> None:
+            self.executable = executable
+
+        def __call__(self, *args: object, **kwargs: object) -> _FakeCompletedCommand:
+            warnings.warn(
+                "This process (pid=123) is multi-threaded, use of fork() may lead "
+                "to deadlocks in the child.",
+                DeprecationWarning,
+                stacklevel=1,
+            )
+            return _FakeCompletedCommand()
+
+    monkeypatch.setattr(command_module.sh, "Command", _FakeShCommand)
+
+    result = run_command(["echo", "hi"])
+
+    assert result.ok
 
 
 def test_default_registry_contains_builtin_tools() -> None:
