@@ -9,8 +9,8 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+import sh
 
-from fasthep_toolbench import command as command_module
 from fasthep_toolbench.cms import das
 from fasthep_toolbench.command import CommandResult, run_command
 from fasthep_toolbench.graph import d2
@@ -98,7 +98,7 @@ def test_run_command_survives_fork_multithreaded_deprecation_warning(
         def __init__(self, executable: str) -> None:
             self.executable = executable
 
-        def __call__(self, *args: object, **kwargs: object) -> _FakeCompletedCommand:
+        def __call__(self, *args: object, **kwargs: object) -> _FakeCompletedCommand:  # noqa: ARG002
             warnings.warn(
                 "This process (pid=123) is multi-threaded, use of fork() may lead "
                 "to deadlocks in the child.",
@@ -107,7 +107,7 @@ def test_run_command_survives_fork_multithreaded_deprecation_warning(
             )
             return _FakeCompletedCommand()
 
-    monkeypatch.setattr(command_module.sh, "Command", _FakeShCommand)
+    monkeypatch.setattr(sh, "Command", _FakeShCommand)
 
     result = run_command(["echo", "hi"])
 
