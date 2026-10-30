@@ -429,8 +429,16 @@ def _dataset_tier(dataset: str) -> str | None:
 
 
 def _comment_group(line: str) -> str | None:
+    """A section header such as ``##### QCD_Zjet #####`` names a group.
+
+    Other comment lines (commented-out datasets, free text) do not change the group.
+    """
+    if not (line.startswith("#") and line.endswith("#")):
+        return None
     group = line.strip("#").strip()
-    return group or None
+    if not group or "/" in group:
+        return None
+    return group
 
 
 def _names(payload: Any) -> list[str]:
