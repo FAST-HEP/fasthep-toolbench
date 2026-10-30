@@ -12,6 +12,9 @@ Add new entries under `## [Unreleased]`, in the category they belong to. At rele
 
 ### Fixed
 
+- `read_dataset_list` (`fasthep tools das-discover`) takes the group only from section headers such as
+  `##### QCD_Zjet #####`. Commented-out datasets (`##/Z/.../NANOAODSIM`) and free-text comments no longer become the
+  group of the datasets below them.
 - `run_command` no longer fails when called from a process that already has other threads
   running (for example `fasthep-render`'s D2 graph compile hook during a real workflow compile).
   `sh` forks to exec the external command, and CPython warns whenever `fork()` runs in a
