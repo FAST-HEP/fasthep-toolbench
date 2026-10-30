@@ -10,6 +10,11 @@ Add new entries under `## [Unreleased]`, in the category they belong to. At rele
 
 ## [Unreleased]
 
+### Added
+
+- A dataset line in a DAS list can end in `# allow-invalid`: `fasthep tools das-discover` then queries that dataset
+  and its files with `status=*`, for a dataset that is INVALID in DAS but whose files are still available.
+
 ### Fixed
 
 - `read_dataset_list` (`fasthep tools das-discover`) takes the group only from section headers such as
