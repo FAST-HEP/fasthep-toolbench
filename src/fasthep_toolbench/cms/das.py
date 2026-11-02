@@ -66,6 +66,9 @@ class DatasetListEntry:
     kind: str
     group: str | None
     line: int
+    # Set by a trailing "# allow-invalid" on the list line: the dataset is INVALID in DAS
+    # but its files are still available, so it is queried with status=*.
+    allow_invalid: bool = False
 
 
 def discover_das_datasets(
@@ -93,6 +96,7 @@ def discover_das_datasets(
     file_records: list[dict[str, Any]] = []
 
     for entry in entries:
+        status = " status=*" if entry.allow_invalid else ""
         parent_result = _run_das_json(
             runner,
             f"parent dataset={entry.dataset}",
@@ -108,7 +112,7 @@ def discover_das_datasets(
                 parent=parent,
                 result=_run_das_json(
                     runner,
-                    f"dataset dataset={entry.dataset}",
+                    f"dataset dataset={entry.dataset}{status}",
                     timeout=timeout,
                     x509_proxy=x509_proxy_value,
                 ),
@@ -116,7 +120,7 @@ def discover_das_datasets(
         )
         file_result = _run_das_text(
             runner,
-            f"file dataset={entry.dataset}",
+            f"file dataset={entry.dataset}{status}",
             timeout=timeout,
             x509_proxy=x509_proxy_value,
         )
@@ -168,12 +172,14 @@ def read_dataset_list(path: Path, *, kind: str) -> list[DatasetListEntry]:
         if line.startswith("#"):
             group = _comment_group(line) or group
             continue
+        dataset, _, comment = line.partition("#")
         entries.append(
             DatasetListEntry(
-                dataset=line,
+                dataset=dataset.strip(),
                 kind=kind,
                 group=group,
                 line=line_number,
+                allow_invalid=comment.strip().startswith("allow-invalid"),
             )
         )
     return entries
