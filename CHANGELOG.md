@@ -10,6 +10,8 @@ Add new entries under `## [Unreleased]`, in the category they belong to. At rele
 
 ## [Unreleased]
 
+## [2026.11.1] - 2026-11-02
+
 ### Added
 
 - A dataset line in a DAS list can end in `# allow-invalid`: `fasthep tools das-discover` then queries that dataset
@@ -20,6 +22,11 @@ Add new entries under `## [Unreleased]`, in the category they belong to. At rele
 - `read_dataset_list` (`fasthep tools das-discover`) takes the group only from section headers such as
   `##### QCD_Zjet #####`. Commented-out datasets (`##/Z/.../NANOAODSIM`) and free-text comments no longer become the
   group of the datasets below them.
+
+## [2026.10.2] - 2026-10-27
+
+### Fixed
+
 - `run_command` no longer fails when called from a process that already has other threads
   running (for example `fasthep-render`'s D2 graph compile hook during a real workflow compile).
   `sh` forks to exec the external command, and CPython warns whenever `fork()` runs in a
